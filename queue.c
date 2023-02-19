@@ -54,6 +54,24 @@ bool q_insert_head(struct list_head *head, char *s)
 /* Insert an element at tail of queue */
 bool q_insert_tail(struct list_head *head, char *s)
 {
+    if (!head)  // if queue is NULL
+        return false;
+
+    element_t *element = malloc(sizeof(element_t));
+    if (!element)  // if malloc failed, return NULL
+        return false;
+
+    int s_len = strlen(s) + 1;  // handle the value of element
+    char *str = malloc(s_len * sizeof(char));
+    if (!str) {         // if malloc failed, return NULL
+        free(element);  // because insert failed,release memory
+        return false;
+    }
+    strncpy(str, s, s_len);
+    str[s_len] = '\0';
+    element->value = str;
+
+    list_add_tail(&element->list, head);
     return true;
 }
 
@@ -104,7 +122,16 @@ void q_swap(struct list_head *head)
 }
 
 /* Reverse elements in queue */
-void q_reverse(struct list_head *head) {}
+void q_reverse(struct list_head *head)
+{
+    if (!head || list_empty(head))  // if queue is NULL or head = NULL
+        return;
+
+    element_t *it = NULL, *is = NULL;
+    list_for_each_entry_safe (it, is, head, list) {
+        list_move(&it->list, head);
+    }
+}
 
 /* Reverse the nodes of the list k at a time */
 void q_reverseK(struct list_head *head, int k)
