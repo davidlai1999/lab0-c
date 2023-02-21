@@ -176,18 +176,9 @@ void q_swap(struct list_head *head)
 {
     // ttps://leetcode.com/problems/swap-nodes-in-pairs/
 
-    if (!head || list_empty(head))  // if queue is NULL or head = NULL
+    if (!head)
         return;
-
-    int count = 0;
-    struct list_head *entry = NULL, *safe = NULL;
-    list_for_each_safe (entry, safe, head) {
-        if (count % 2 == 0)
-            continue;
-
-        list_move(entry, entry->prev->prev);
-        count++;
-    }
+    q_reverseK(head, 2);
 }
 
 /* Reverse elements in queue */
@@ -206,24 +197,118 @@ void q_reverse(struct list_head *head)
 void q_reverseK(struct list_head *head, int k)
 {
     // https://leetcode.com/problems/reverse-nodes-in-k-group/
-    if (!head || list_empty(head) ||
-        list_is_singular(head))  // if queue is NULL or head = NULL
+    if (!head || list_empty(head))  // if queue is NULL or head = NULL
         return;
 
-    int count = 0;
-    element_t *it = NULL, *is = NULL;
-    struct list_head *temp = NULL;
-    list_for_each_entry_safe (it, is, head, list) {
-        if (count % k == 0)
-            temp = &it->list;
-        list_move(&it->list, temp);
+    int count = 1;
+    struct list_head *node = NULL, *safe = NULL, *temp = head;
+    list_for_each_safe (node, safe, head) {
+        if (count % k == 0) {
+            for (int i = 0; i < k; i++) {
+                list_move(node, temp);
+                temp = temp->next;
+                node = safe->prev;
+            }
+        }
 
         count++;
     }
 }
 
+void split(struct list_head **front, struct list_head **back)
+{
+    struct list_head *fast = *front, *slow = *front;
+    while (fast->next != *front && fast->next->next != *front) {
+        slow = slow->next;
+        fast = fast->next->next;
+    }
+
+    *back = slow->next;
+    slow->next = *front;
+    (*back)->prev = (*front)->prev;
+    (*front)->prev->next = *back;
+    (*front)->prev = slow;
+}
+
+struct list_head *mergelist(struct list_head *front, struct list_head *back)
+{
+    struct list_head *result = NULL, *temp = NULL, *walk1 = front,
+                     *walk2 = back;
+    struct list_head *front_tail = front->prev, *back_tail = back->prev;
+    front_tail->next = NULL, back_tail->next = NULL;
+
+    while (walk1 != NULL && walk2 != NULL) {
+        element_t *element1 = list_entry(walk1, element_t, list);
+        element_t *element2 = list_entry(walk2, element_t, list);
+        if (strcmp(element1->value, element2->value) < 0) {
+            if (!result) {
+                result = walk1;
+                temp = result;
+            } else {
+                temp->next = walk1;
+                walk1->prev = temp;
+                temp = temp->next;
+            }
+
+            walk1 = walk1->next;
+        } else {
+            if (!result) {
+                result = walk2;
+                temp = result;
+            } else {
+                temp->next = walk2;
+                walk2->prev = temp;
+                temp = temp->next;
+            }
+
+            walk2 = walk2->next;
+        }
+    }
+
+    if (walk2 == NULL) {
+        temp->next = walk1;
+        walk1->prev = temp;
+        front_tail->next = result;
+        result->prev = front_tail;
+    } else {
+        temp->next = walk2;
+        walk2->prev = temp;
+        back_tail->next = result;
+        result->prev = back_tail;
+    }
+
+    return result;
+}
+
+void mergesort(struct list_head **head)
+{
+    if ((*head)->next == *head)
+        return;
+    struct list_head *front = *head, *back = NULL;
+    split(&front, &back);
+
+    mergesort(&front);
+    mergesort(&back);
+
+    *head = mergelist(front, back);
+}
+
 /* Sort elements of queue in ascending order */
-void q_sort(struct list_head *head) {}
+void q_sort(struct list_head *head)
+{
+    if (!head || list_empty(head))  // if queue is NULL or head = NULL
+        return;
+
+    struct list_head *front = head->next;
+    list_del_init(head);
+
+    mergesort(&front);
+    head->prev = front->prev;
+    head->next = front;
+    front->prev->next = head;
+    front->prev = head;
+
+}
 
 /* Remove every node which has a node with a strictly greater value anywhere to
  * the right side of it */
