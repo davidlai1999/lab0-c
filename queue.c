@@ -155,17 +155,31 @@ bool q_delete_mid(struct list_head *head)
 bool q_delete_dup(struct list_head *head)
 {
     // https://leetcode.com/problems/remove-duplicates-from-sorted-list-ii/
-    if (list_empty(head))
+    if (!head)
         return false;
+    if (list_empty(head) || list_is_singular(head))
+        return true;
 
+    bool marker = false;
     element_t *entry = NULL, *safe = NULL, *temp = NULL;
     list_for_each_entry_safe (entry, safe, head, list) {
-        if (temp != NULL && strcmp(temp->value, entry->value)) {
+        if (temp != NULL && strcmp(temp->value, entry->value) == 0) {
             list_del(&entry->list);
             q_release_element(entry);
-            continue;
+            marker = true;
+        } else {
+            if (marker == true) {
+                list_del(&temp->list);
+                q_release_element(temp);
+                marker = false;
+            }
+            temp = entry;
         }
-        temp = entry;
+    }
+
+    if (marker == true) {
+        list_del(&temp->list);
+        q_release_element(temp);
     }
 
     return true;
@@ -332,8 +346,8 @@ int q_descend(struct list_head *head)
 
         list_del(&entry->list);
         q_release_element(entry);
-
     }
+
     return len;
 }
 
@@ -341,5 +355,29 @@ int q_descend(struct list_head *head)
 int q_merge(struct list_head *head)
 {
     // https://leetcode.com/problems/merge-k-sorted-lists/
-    return 0;
+    if (!head)
+        return 0;
+
+    struct list_head *first = NULL, *walk = head->next->next;
+    struct list_head *front = NULL, *back = NULL;
+    first = list_entry(head->next, queue_contex_t, chain)->q;
+    front = first->next;
+    int len = list_entry(head->next, queue_contex_t, chain)->size;
+    list_del_init(front->prev);
+    while (walk != head) {
+        back = list_entry(walk, queue_contex_t, chain)->q->next;
+        list_del_init(back->prev);
+        front = mergelist(front, back);
+
+        len = len + list_entry(walk, queue_contex_t, chain)->size;
+        walk = walk->next;
+    }
+
+    first->next = front;
+    first->prev = front->prev;
+    front->prev->next = first;
+    front->prev = first;
+    list_entry(head->next, queue_contex_t, chain)->size = len;
+
+    return len;
 }
